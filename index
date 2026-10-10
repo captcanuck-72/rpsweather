@@ -1,0 +1,309 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Weather</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600&family=Urbanist:wght@500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      /* Same palette as the calendar page and the Pickcel side panels */
+      --panel-top: #2f4d6c;
+      --panel-mid: #3b6a82;
+      --panel-bottom: #4b8792;
+      --card: rgba(255, 255, 255, 0.10);
+      --card-border: rgba(255, 255, 255, 0.16);
+      --text: #ffffff;
+      --text-soft: rgba(255, 255, 255, 0.72);
+      --accent: #f5c242;
+      --rain: #8fd3ff;
+      --hill-far: rgba(31, 58, 86, 0.45);
+      --hill-near: rgba(28, 49, 74, 0.75);
+      --gutter: clamp(10px, 3vmin, 28px);
+      font-size: clamp(14px, 1.6vmin + 8px, 26px);
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body { margin: 0; height: 100%; }
+
+    body {
+      background: linear-gradient(180deg, var(--panel-top) 0%, var(--panel-mid) 55%, var(--panel-bottom) 100%) fixed;
+      color: var(--text);
+      font-family: "Urbanist", system-ui, sans-serif;
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      height: 100dvh;
+      padding: var(--gutter);
+      gap: calc(var(--gutter) * 0.8);
+      overflow: hidden;
+      position: relative;
+    }
+
+    h1 {
+      font-family: "Oswald", sans-serif;
+      font-weight: 600;
+      font-size: 2.1rem;
+      line-height: 1;
+      margin: 0;
+      letter-spacing: 0.01em;
+      position: relative;
+    }
+
+    main {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      gap: calc(var(--gutter) * 0.8);
+      min-height: 0;
+    }
+
+    /* ---- Current conditions ---- */
+    .now {
+      display: grid;
+      grid-template-columns: auto 1fr;
+      align-items: center;
+      gap: 0.4rem 1rem;
+    }
+
+    .now .icon { width: 5.2rem; height: 5.2rem; }
+
+    .temp {
+      font-family: "Oswald", sans-serif;
+      font-weight: 500;
+      font-size: 5.6rem;
+      line-height: 0.9;
+      letter-spacing: -0.02em;
+    }
+
+    .temp sup {
+      font-size: 0.4em;
+      vertical-align: 0.95em;
+      margin-left: 0.05em;
+      font-weight: 500;
+    }
+
+    .condition {
+      grid-column: 1 / -1;
+      font-weight: 700;
+      font-size: 1.5rem;
+      line-height: 1.2;
+    }
+
+    .details {
+      grid-column: 1 / -1;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.3rem 1.2rem;
+      color: var(--text-soft);
+      font-weight: 600;
+      font-size: 0.95rem;
+    }
+
+    .details b { color: var(--text); font-weight: 700; }
+
+    /* ---- Forecast ---- */
+    .forecast {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    .day {
+      display: grid;
+      grid-template-columns: 3.4rem 2.2rem 1fr auto;
+      align-items: center;
+      gap: 0.75rem;
+      background: var(--card);
+      border: 1px solid var(--card-border);
+      border-radius: 14px;
+      padding: 0.55rem 0.9rem;
+      backdrop-filter: blur(3px);
+    }
+
+    .day .name {
+      font-family: "Oswald", sans-serif;
+      font-weight: 500;
+      font-size: 1.05rem;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+
+    .day .icon { width: 2.2rem; height: 2.2rem; }
+
+    .day .desc {
+      min-width: 0;
+      font-weight: 600;
+      font-size: 0.9rem;
+      line-height: 1.2;
+    }
+
+    .day .pop {
+      display: block;
+      color: var(--rain);
+      font-size: 0.8rem;
+      margin-top: 0.1rem;
+    }
+
+    .day .range {
+      font-family: "Oswald", sans-serif;
+      font-size: 1.25rem;
+      font-weight: 500;
+      white-space: nowrap;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .day .range .lo { color: var(--text-soft); margin-left: 0.35rem; }
+
+    .icon { color: var(--text); flex-shrink: 0; }
+    .icon .sun { color: var(--accent); }
+    .icon .drop { color: var(--rain); }
+
+    .message {
+      color: var(--text-soft);
+      font-weight: 600;
+      font-size: 1.1rem;
+    }
+
+    /* Rolling hills along the bottom, a nod to the Pickcel weather scene */
+    .scene {
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      width: 100%;
+      height: 22%;
+      pointer-events: none;
+    }
+
+    body.no-header h1 { display: none; }
+  </style>
+</head>
+<body>
+  <svg class="scene" viewBox="0 0 400 120" preserveAspectRatio="none" aria-hidden="true">
+    <path style="fill: var(--hill-far)" d="M0 70 C70 40 130 45 200 62 C270 80 330 50 400 38 L400 120 L0 120 Z"/>
+    <path style="fill: var(--hill-near)" d="M0 95 C80 70 160 78 240 92 C310 104 360 88 400 80 L400 120 L0 120 Z"/>
+  </svg>
+
+  <h1>Weather</h1>
+  <main id="weather" aria-live="polite">
+    <p class="message">Loading weather…</p>
+  </main>
+
+  <script>
+    // ---- Settings -------------------------------------------------------
+    const LATITUDE = 45.383;          // Rothesay, NB
+    const LONGITUDE = -66.000;
+    const TZ = 'America/Halifax';
+    const FORECAST_DAYS = 4;          // days shown under today
+    const RELOAD_MINUTES = 15;
+    // ---------------------------------------------------------------------
+
+    const params = new URLSearchParams(location.search);
+    if (params.get('header') === '0') document.body.classList.add('no-header');
+
+    const API = 'https://api.open-meteo.com/v1/forecast'
+      + `?latitude=${LATITUDE}&longitude=${LONGITUDE}`
+      + '&current=temperature_2m,apparent_temperature,weather_code,wind_speed_10m,wind_gusts_10m,is_day'
+      + '&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max'
+      + `&timezone=${encodeURIComponent(TZ)}&forecast_days=${FORECAST_DAYS + 1}&wind_speed_unit=kmh`;
+
+    // WMO weather codes -> words and icon
+    const CODES = {
+      0: ['Clear sky', 'clear'], 1: ['Mainly clear', 'clear'], 2: ['Partly cloudy', 'partly'],
+      3: ['Overcast', 'cloud'], 45: ['Fog', 'fog'], 48: ['Freezing fog', 'fog'],
+      51: ['Light drizzle', 'drizzle'], 53: ['Drizzle', 'drizzle'], 55: ['Heavy drizzle', 'drizzle'],
+      56: ['Freezing drizzle', 'drizzle'], 57: ['Freezing drizzle', 'drizzle'],
+      61: ['Light rain', 'rain'], 63: ['Rain', 'rain'], 65: ['Heavy rain', 'rain'],
+      66: ['Freezing rain', 'rain'], 67: ['Freezing rain', 'rain'],
+      71: ['Light snow', 'snow'], 73: ['Snow', 'snow'], 75: ['Heavy snow', 'snow'], 77: ['Snow grains', 'snow'],
+      80: ['Rain showers', 'rain'], 81: ['Rain showers', 'rain'], 82: ['Heavy showers', 'rain'],
+      85: ['Snow showers', 'snow'], 86: ['Heavy snow showers', 'snow'],
+      95: ['Thunderstorm', 'thunder'], 96: ['Thunderstorm, hail', 'thunder'], 99: ['Thunderstorm, hail', 'thunder']
+    };
+    const describe = code => CODES[code] || ['—', 'cloud'];
+
+    const CLOUD = '<path d="M7 19h10.5a4 4 0 0 0 .6-7.95A6 6 0 0 0 6.4 12 3.5 3.5 0 0 0 7 19z"/>';
+    const CLOUD_HIGH = '<path d="M7 15h10.5a4 4 0 0 0 .6-7.95A6 6 0 0 0 6.4 8 3.5 3.5 0 0 0 7 15z"/>';
+    const ICONS = {
+      clear: day => day
+        ? '<g class="sun"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2.2M12 19.3v2.2M2.5 12h2.2M19.3 12h2.2M5.3 5.3l1.5 1.5M17.2 17.2l1.5 1.5M5.3 18.7l1.5-1.5M17.2 6.8l1.5-1.5"/></g>'
+        : '<path d="M19.5 14.5A8 8 0 0 1 9.5 4.5a8 8 0 1 0 10 10z"/>',
+      partly: day => (day
+        ? '<g class="sun"><circle cx="8.5" cy="8" r="3"/><path d="M8.5 2v1.5M2.5 8H4M4.3 3.8l1 1M12.7 3.8l-1 1"/></g>'
+        : '<path d="M12 6.5A4.5 4.5 0 0 1 6.5 3a4.5 4.5 0 1 0 5.5 3.5z"/>') + CLOUD,
+      cloud: () => CLOUD,
+      fog: () => '<path d="M4 9h16M6 13h12M4 17h16"/>',
+      drizzle: () => CLOUD_HIGH + '<g class="drop"><path d="M8 18.5v1M12 18.5v1M16 18.5v1"/></g>',
+      rain: () => CLOUD_HIGH + '<g class="drop"><path d="M8 17.5l-1 3M12 17.5l-1 3M16 17.5l-1 3"/></g>',
+      snow: () => CLOUD_HIGH + '<g class="drop"><path d="M8 18.5v.01M12 20v.01M16 18.5v.01M10 21.5v.01M14 21.5v.01" stroke-width="2.4"/></g>',
+      thunder: () => CLOUD_HIGH + '<g class="sun"><path d="M12.5 15l-2 4h3l-2 4"/></g>'
+    };
+    const icon = (type, isDay = true) =>
+      `<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[type](isDay)}</svg>`;
+
+    const round = n => Math.round(n);
+    const dayName = iso => new Date(iso + 'T12:00:00Z')
+      .toLocaleDateString('en-CA', { weekday: 'short', timeZone: 'UTC' }).replace('.', '');
+
+    const root = document.getElementById('weather');
+
+    function render(data) {
+      const c = data.current;
+      const d = data.daily;
+      const [condition, type] = describe(c.weather_code);
+      const isDay = c.is_day === 1;
+
+      let html = `
+        <section class="now">
+          ${icon(type, isDay)}
+          <div class="temp">${round(c.temperature_2m)}<sup>°C</sup></div>
+          <div class="condition">${condition}</div>
+          <div class="details">
+            <span>High <b>${round(d.temperature_2m_max[0])}°</b> · Low <b>${round(d.temperature_2m_min[0])}°</b></span>
+            <span>Feels like <b>${round(c.apparent_temperature)}°</b></span>
+            <span>Wind <b>${round(c.wind_speed_10m)} km/h</b>${c.wind_gusts_10m > c.wind_speed_10m + 10 ? `, gusts ${round(c.wind_gusts_10m)}` : ''}</span>
+          </div>
+        </section>
+        <ul class="forecast">`;
+
+      for (let i = 1; i < d.time.length; i++) {
+        const [desc, t] = describe(d.weather_code[i]);
+        const pop = d.precipitation_probability_max[i];
+        html += `
+          <li class="day">
+            <span class="name">${dayName(d.time[i])}</span>
+            ${icon(t)}
+            <span class="desc">${desc}${pop >= 20 ? `<span class="pop">${pop}% chance of precip.</span>` : ''}</span>
+            <span class="range">${round(d.temperature_2m_max[i])}°<span class="lo">${round(d.temperature_2m_min[i])}°</span></span>
+          </li>`;
+      }
+      root.innerHTML = html + '</ul>';
+    }
+
+    let loaded = false;
+    async function refresh() {
+      try {
+        const res = await fetch(API, { cache: 'no-store' });
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        render(await res.json());
+        loaded = true;
+      } catch (e) {
+        console.error(e);
+        // Keep showing the last good reading; only show a message if we never loaded
+        if (!loaded) root.innerHTML = '<p class="message">Weather unavailable. Retrying…</p>';
+        setTimeout(refresh, 60 * 1000);
+      }
+    }
+
+    refresh();
+    setInterval(refresh, RELOAD_MINUTES * 60 * 1000);
+  </script>
+</body>
+</html>
